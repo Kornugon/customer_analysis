@@ -1,0 +1,37 @@
+{
+    "RNNModel":
+        {
+            "model_init_params": {
+                                    "hidden_size": 128,
+                                    "num_layers": 2,
+                                    "num_heads": 12
+                                },
+            "model_training_params": {
+                                    "task": "events",
+                                    "device": "cuda",
+                                    "num_epochs": 35,
+                                    "batch_size": 32,
+                                    "num_workers": 6,
+                                    "early_stopping_patience": 3,
+                                    "shuffle_train_dataloader": false,
+                                    "eval_model": true,
+                                    "proba_thresold": 0.5,
+                                    "return_churn_prob": true,
+                                    "save_attention_weights": true,
+                                    "grid_search_metric": "accuracy",
+                                    "model_artifacts_path": "artifacts"
+                                },
+            "grid_search_params": {
+                                    "nonlinearity": ["relu", "tanh"],
+                                    "attention_type": ["multi-head", "global", "self"],
+                                    "reg_type":["L2"],
+                                    "reg_lambda":  [0.0001, 0.00015, 0.0002],
+                                    "learning_rate": [0.0011, 0.0021]
+                                  },            
+            "mlflow_config":    {
+                                    "enable": true,
+                                    "use_local_server": true,
+                                    "local_port": 5000
+                                }
+        }
+}
