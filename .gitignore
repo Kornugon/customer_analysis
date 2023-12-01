@@ -153,8 +153,11 @@ artifacts/
 
 # MLFlow logged
 mlruns/
+mlartifacts/
 
 # Temporary project files
 _temp/
 rnn_config copy.json
+rnn_config copy 2.json
 transformer_config copy.json
+transformer_config copy 2.json

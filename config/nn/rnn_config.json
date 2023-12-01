@@ -27,11 +27,19 @@
                                     "reg_type":["L2"],
                                     "reg_lambda":  [0.0001, 0.00015, 0.0002],
                                     "learning_rate": [0.0011, 0.0021]
-                                  },            
+                                  },           
             "mlflow_config":    {
                                     "enable": true,
                                     "use_local_server": true,
-                                    "local_port": 5000
+                                    "local_port": 5000,
+                                    "artifact_path": "model",
+                                    "local_whl": "/dist/customer_analysis-0.0.1.dev0-py3-none-any.whl",
+                                    "log_model_file": true,
+                                    "await_registration_for": 20,
+                                    "regis_model_descrip": "",
+                                    "regis_model_on_predict": true,
+                                    "serve_regis_model_on_predict": true,
+                                    "tags": {}
                                 }
         }
 }

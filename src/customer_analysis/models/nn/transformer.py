@@ -129,7 +129,7 @@ class TransformerModel(nn.Module, ABC):
             self,
             sequence: torch.Tensor,
             inputs_mask: torch.Tensor,
-            top_k: int = 1) -> torch.Tensor:
+            top_k: int = 1) -> tuple[torch.Tensor, list[torch.Tensor]]:
         """
         Generates a prediction for the next event in a sequence of events
         or churn based on sequence of events.
@@ -139,17 +139,19 @@ class TransformerModel(nn.Module, ABC):
             true and padded values.
         :param int top_k: The number of top results to return.
 
-        :return torch.Tensor: The predicted index of event or churn.
+        :return tuple[torch.Tensor, list[torch.Tensor]]: The predicted index\
+            of event or churn and attention weights.
         """
-        output, _ = self(sequence, inputs_mask)
+        output, attention_weights = self(sequence, inputs_mask)
         _, top_k_indices = torch.topk(output[:, -1], top_k, dim=-1)
 
-        return top_k_indices
+        return top_k_indices, attention_weights
 
     def predict_proba(
             self,
             sequence: torch.Tensor,
-            inputs_mask: torch.Tensor) -> torch.Tensor:
+            inputs_mask: torch.Tensor
+    ) -> tuple[torch.Tensor, list[torch.Tensor]]:
         """
         Generates the probabilities for each class for the churn
         based on sequence of events.
@@ -158,14 +160,14 @@ class TransformerModel(nn.Module, ABC):
         :param torch.Tensor inputs_mask: A boolean mask that indicates\
             true and padded values.
 
-        :return torch.Tensor: A tensor of shape (batch_size, num_classes)\
-            containing the probabilities for each class\
-            for each input sequence.
+        :return tuple[torch.Tensor, list[torch.Tensor]]: A tensor of shape\
+            (batch_size, num_classes) containing the probabilities for each\
+            class for each input sequence and attention weights.
         """
-        output, _ = self(sequence, inputs_mask)
+        output, attention_weights = self(sequence, inputs_mask)
         probabilities = torch.softmax(output[:, -1], dim=-1)
 
-        return probabilities
+        return probabilities, attention_weights
 
     def step(
             self,

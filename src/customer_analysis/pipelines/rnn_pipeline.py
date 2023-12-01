@@ -1,24 +1,23 @@
 import os
 import json
-import inspect
-from datetime import datetime
-from collections import defaultdict
-from typing import Any, Optional
+import shutil
 import signal
+import inspect
+from typing import Any, Optional
+from collections import defaultdict
 
-import mlflow
-import pandas as pd
-from tqdm import tqdm
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from torch.optim import Optimizer, AdamW
 from torch.utils.data import Dataset, DataLoader
 
-from customer_analysis.pipelines.nn_pipeline import NNPipeline, \
-    IncorrectConfig, ModelNotFitted
-from customer_analysis.models.nn import RNNModel
+from customer_analysis.utils.mlflow_functions import MLFlowManager
 from customer_analysis.utils.functional import parameter_search, \
     pytorch_classification_metrics
+from customer_analysis.models.nn import RNNModel
+from customer_analysis.pipelines.nn_pipeline import NNPipeline, \
+    IncorrectConfig, ModelNotFitted
 
 
 class RNNPipeline(NNPipeline):
@@ -46,6 +45,7 @@ class RNNPipeline(NNPipeline):
         self.model_params, self.train_params, self.grid_search_params, \
             self.mlflow_config = self.load(config_path)
         self.best_params = self.model_params
+        self.best_score = -torch.inf
 
         self.device = torch.device(self.train_params.get('device', 'cpu'))
         self.loss_func = nn.CrossEntropyLoss()
@@ -67,12 +67,14 @@ class RNNPipeline(NNPipeline):
 
         self.save_attention_weights = self.train_params.get(
             'save_attention_weights', True)
-        self.best_model_path = self.train_params.get(
+        self.model_path = self.train_params.get(
             'model_artifacts_path', 'artifacts')
-        self.complete_model_path = ''
         self.predicted_targets = []
+        self.pretrained_model_on_predict = False
         self.model_fitted = False
-        self.mlflow_server = None
+        self.mlflow_manager = MLFlowManager(
+            self.model_name, self.mlflow_config) \
+            if self.mlflow_config['enable'] else None
 
         self._validate_args(self.model_params)
 
@@ -136,14 +138,14 @@ class RNNPipeline(NNPipeline):
                 num_workers=self.train_params['num_workers'],
                 shuffle=False)
 
-        models_results, grid_scores = [], []
-        if self.grid_search_params:
-            if self.mlflow_config['enable'] and \
-                    self.mlflow_config['use_local_server']:
-                local_port = self.mlflow_config['local_port']
-                self.mlflow_server = self.start_mlflow_server(port=local_port)
-                mlflow.set_tracking_uri(f"http://localhost:{local_port}")
+        mlflow_server = self.mlflow_manager.start_mlflow_server() \
+            if self.mlflow_manager else None
 
+        self.best_model_path = \
+            f'{self.model_path}/grid_model/{self.model_name}_{self.task}_task'
+
+        phase = 'grid_search'
+        if self.grid_search_params:
             grid_params = list(parameter_search(**self.grid_search_params))
             for i, params in enumerate(grid_params, start=1):
                 parameters = {
@@ -163,52 +165,44 @@ class RNNPipeline(NNPipeline):
                     f' Regularization type: "{parameters["reg_type"]}"'
                 print(param_grid_txt)
 
-                # model artifacts path
-                self.complete_model_path = \
-                    f'{self.best_model_path}/{self.model_name}'
-                self.complete_model_path += f'/grid_model_{i}/model_{i}'
-
                 # train/val
                 optimizer = AdamW(model.parameters(),
                                   parameters['learning_rate'])
-                scores = self._rnn_training(
-                    model, dataloaders, optimizer,
-                    self.train_params['num_epochs'],
-                    parameters['reg_lambda'], parameters['reg_type'])
+                if self.mlflow_manager:
+                    descr = f"{self.model_name} {self.task} grid search"
+                    with self.mlflow_manager.start_run(
+                            phase, self.model_name, descr):
+                        scores = self._rnn_training(
+                            model, dataloaders, optimizer,
+                            self.train_params['num_epochs'],
+                            parameters['reg_lambda'], parameters['reg_type'])
+                        log_params = params | self.model_params | (
+                            self.train_params if self.early_stop_epoch == -1
+                            else self.train_params |
+                            {"logged_early_stop_epoch": self.early_stop_epoch})
+                        self.mlflow_manager.log_run(log_params, scores, model)
+                else:
+                    scores = self._rnn_training(
+                        model, dataloaders, optimizer,
+                        self.train_params['num_epochs'],
+                        parameters['reg_lambda'], parameters['reg_type'])
 
-                self.save_model(model, f'{self.complete_model_path}.pth')
-                grid_scores.append(
-                    (params | self.model_params | self.train_params | scores))
-                models_results.append({
-                    'model_id': i,
-                    'model_path': f'{self.complete_model_path}.pth',
-                    'params': parameters | self.train_params,
-                    **scores})
+                # Record best model, model scores & params +
+                # (optionally) attention weights
+                if scores[self.grid_metric] > self.best_score:
+                    self.best_score = scores[self.grid_metric]
+                    self.best_params = parameters | self.train_params
+                    self.save_model(model, self.best_model_path + '.pth')
+                    if self.save_attention_weights:
+                        shutil.copyfile(
+                            f'{self.best_model_path}_temporary.json',
+                            f'{self.best_model_path}.json')
+                if os.path.exists(f'{self.best_model_path}_temporary.json'):
+                    os.remove(f'{self.best_model_path}_temporary.json')
 
-                # if the mlfow_config key is provided, start logging
-                try:
-                    if self.mlflow_config['enable']:
-                        run_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
-                        with mlflow.start_run(
-                                run_name=run_time,
-                                tags={'phase': 'grid_search'},
-                                description=f"""
-                                    {self.model_name} {self.task} grid search
-                                """):
-                            mlflow.log_params(
-                                params | self.model_params | self.train_params)
-                            mlflow.log_metrics(scores)
-                except KeyError:
-                    raise ValueError("No mlflow_config provided or \
-                                     enable value in config file")
-
-            grid_logs = pd.DataFrame(models_results) \
-                .sort_values(self.grid_metric, ascending=False)
-            self.best_params = grid_logs.iloc[0]['params']
-            self.best_model_path = grid_logs.iloc[0]['model_path']
             self.model_fitted = True
-            if self.mlflow_server:
-                os.killpg(os.getpgid(self.mlflow_server.pid), signal.SIGTERM)
+            if mlflow_server:
+                os.killpg(os.getpgid(mlflow_server.pid), signal.SIGTERM)
                 print("\nTerminate local MLFlow server.")
         else:
             raise ValueError("There are no training parameters provided")
@@ -230,11 +224,9 @@ class RNNPipeline(NNPipeline):
 
         :return list[int]: The list of predicted events or churn.
         """
-        if self.mlflow_config['enable'] and \
-                self.mlflow_config['use_local_server']:
-            local_port = self.mlflow_config['local_port']
-            self.mlflow_server = self.start_mlflow_server(port=local_port)
-            mlflow.set_tracking_uri(f"http://localhost:{local_port}")
+        phase = 'predict'
+        mlflow_server = self.mlflow_manager.start_mlflow_server() \
+            if self.mlflow_manager else None
 
         pred_dataloader = DataLoader(
             predict_data,
@@ -250,45 +242,47 @@ class RNNPipeline(NNPipeline):
 
         if model_path:
             model.load_state_dict(torch.load(model_path))
+            self.best_model_path = f'{self.model_path}/pre_trained/'
+            self.best_model_path += f'{self.model_name}_{self.task}_task'
+            self.mlflow_config['tags']['used_pre_trained_model'] = 'True'
+            self.pretrained_model_on_predict = True
         else:
             try:
                 if self.model_fitted:
-                    model.load_state_dict(torch.load(self.best_model_path))
-                    # exclude :-4 as for .pth
-                    self.complete_model_path = self.best_model_path[:-4]
+                    model.load_state_dict(
+                        torch.load(self.best_model_path + '.pth'))
             except Exception as exc:
                 raise ModelNotFitted(
                     "Fit model to the data first or provide 'model_path' to \
                         already trained model.") from exc
 
-        optimizer = AdamW(model.parameters(),
-                          self.best_params['learning_rate'])
-        scores = self._rnn_loop(
-            'test', model, pred_dataloader, optimizer)
+        lr = 0.001 if self.pretrained_model_on_predict \
+            else self.best_params['learning_rate']
+        optimizer = AdamW(model.parameters(), lr)
 
-        progress = f"test_loss={scores['test_loss']:.3f}"
-        progress += f", {self.grid_metric}="
-        progress += f"{scores.get(self.grid_metric, float('nan')):.3f}."
-        print(progress)
+        if self.mlflow_manager:
+            descr = f"{self.model_name} {self.task} {phase}"
+            with self.mlflow_manager.start_run(
+                    phase, self.model_name, descr):
+                scores = self._rnn_loop(
+                    'test', model, pred_dataloader, optimizer)
+                progress = f"test_loss={scores['test_loss']:.3f}"
+                progress += f", {self.grid_metric}="
+                progress += f"{scores.get(self.grid_metric, float('nan')):.3f}"
+                progress += ".\n"
+                print(progress)
+                self.mlflow_manager.log_run(self.best_params, scores, model)
+        else:
+            scores = self._rnn_loop(
+                'test', model, pred_dataloader, optimizer)
+            progress = f"test_loss={scores['test_loss']:.3f}"
+            progress += f", {self.grid_metric}="
+            progress += f"{scores.get(self.grid_metric, float('nan')):.3f}"
+            progress += ".\n"
+            print(progress)
 
-        # if the mlfow_config key is provided, start logging
-        try:
-            if self.mlflow_config['enable']:
-                run_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
-                with mlflow.start_run(
-                        run_name=run_time,
-                        tags={'phase': 'predicting'},
-                        description=f"""
-                            {self.model_name} {self.task} prediction
-                        """):
-                    mlflow.log_params(self.best_params)
-                    mlflow.log_metrics(scores)
-        except KeyError:
-            raise ValueError(
-                "No mlflow_config provided or enable value in config file")
-
-        if self.mlflow_server:
-            os.killpg(os.getpgid(self.mlflow_server.pid), signal.SIGTERM)
+        if mlflow_server:
+            os.killpg(os.getpgid(mlflow_server.pid), signal.SIGTERM)
             print("\nTerminate local MLFlow server.")
 
         return self.predicted_targets
@@ -320,6 +314,7 @@ class RNNPipeline(NNPipeline):
         best_model_params = rnn.state_dict()
         best_val_loss = torch.inf
         epochs_without_improvement = 0
+        self.early_stop_epoch = -1
 
         for epoch in range(num_epochs):
             metrics = defaultdict(float)
@@ -343,6 +338,7 @@ class RNNPipeline(NNPipeline):
                             self.train_params['early_stopping_patience']:
                         self.train_val_info(epoch_progr, metrics)
                         print(f'Early stop at epoch {epoch + 1}!')
+                        self.early_stop_epoch = epoch + 1
                         break
 
             if (epoch + 1) % self._SHOW_LOSS_INFO_STEP == 0 \
@@ -391,26 +387,28 @@ class RNNPipeline(NNPipeline):
                 inputs = inputs.to(self.device)
                 targets = targets.to(self.device)
 
-                loss, weights = rnn.step(
-                    phase=phase,
-                    inputs=inputs,
-                    seq_lengths=seq_lengths,
-                    targets=targets,
-                    optimizer=optimizer,
-                    loss_func=self.loss_func,
-                    reg_lambda=reg_lambda,
-                    reg_type=reg_type)
+                if not self.pretrained_model_on_predict:
+                    loss, _ = rnn.step(
+                        phase=phase,
+                        inputs=inputs,
+                        seq_lengths=seq_lengths,
+                        targets=targets,
+                        optimizer=optimizer,
+                        loss_func=self.loss_func,
+                        reg_lambda=reg_lambda,
+                        reg_type=reg_type)
 
-                iterator.set_description(
-                    epoch_progr + phase if epoch_progr else phase)
+                    iterator.set_description(
+                        epoch_progr + phase if epoch_progr else phase)
 
-                scores[f"{phase}_loss"] += loss
+                    scores[f"{phase}_loss"] += loss
+
                 true_targets.extend(targets.tolist())
                 if self.task != 'events' and self.return_churn_prob:
-                    predictions = rnn.predict_proba(
+                    predictions, weights = rnn.predict_proba(
                         inputs, seq_lengths)
                 else:
-                    predictions = rnn.predict(inputs, seq_lengths)
+                    predictions, weights = rnn.predict(inputs, seq_lengths)
                 predicted_targets.extend(predictions.tolist())
 
                 if self.save_attention_weights:
@@ -518,8 +516,15 @@ class RNNPipeline(NNPipeline):
                 'predictions': predictions
             }
 
-        os.makedirs(os.path.dirname(self.complete_model_path), exist_ok=True)
+        if phase == 'test':
+            file_pth = f'{self.best_model_path}.json'
+        elif self.pretrained_model_on_predict:
+            file_pth = f'{self.best_model_path}_pretrained.json'
+        else:
+            file_pth = f'{self.best_model_path}_temporary.json'
+
+        os.makedirs(os.path.dirname(self.best_model_path), exist_ok=True)
         mode = 'w' if phase == 'train' and batch_index == 0 else 'a'
-        with open(f'{self.complete_model_path}.json', mode) as f:
+        with open(file_pth, mode) as f:
             json.dump(data, f)
             f.write('\n')

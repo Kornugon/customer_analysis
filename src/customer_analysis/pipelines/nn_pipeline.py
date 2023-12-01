@@ -3,9 +3,6 @@ import json
 from abc import ABC
 from typing import Any, Union
 
-import subprocess
-import time
-
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -37,6 +34,7 @@ class NNPipeline(ABC):
             'proba_thresold', 0.5)
         self.return_churn_proba = self.train_params.get(
             'return_churn_proba', False)
+        self.local_port = self.mlflow_config.get('local_port', 5000)
 
     def fit(
             self,
@@ -103,34 +101,6 @@ class NNPipeline(ABC):
         progress += f"{grid_metr:.3f}."
         print(progress)
 
-    def start_mlflow_server(
-            self,
-            port: int = 5000) -> subprocess.Popen:
-        """
-        Starts a local MLflow server as a subprocess with the
-        specified port and returns the process object.
-
-        :param int port: The port number for the MLflow server. Default: 5000.
-
-        :return subprocess.Popen: The object representing the MLflow server.
-        """
-        command = ["mlflow", "ui", "--port", str(port)]
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid)
-        time.sleep(2)  # wait for server start up
-
-        for line in iter(process.stdout.readline, b''):
-            line = line.decode('utf-8').rstrip()
-            if 'Listening at' in line:
-                url = line.split()[-2]
-                print(f'Local MLFlow server listening at: {url}')
-                break
-
-        return process
-
     def save_model(
             self,
             model: nn.Module,
@@ -145,14 +115,6 @@ class NNPipeline(ABC):
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
         torch.save(model.state_dict(), model_path)
-
-    def save_attention_data(
-            self) -> None:
-        """
-        Function for saving the attention weights, input data, and predictions
-        for each batch to a JSON file.
-        """
-        pass
 
     def load(self, config_path: SyntaxWarning
              ) -> tuple[dict[str, Any],

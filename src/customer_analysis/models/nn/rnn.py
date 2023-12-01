@@ -117,16 +117,16 @@ class RNNModel(nn.Module, ABC):
             'multi-head': self._attention_multi_head
         }
         attention_func = attention_func_dict.get(self.attention_type)
-        out, weights = attention_func(out, inputs_mask)
+        out, attention_weights = attention_func(out, inputs_mask)
         out = self.fc(out)
 
-        return out, weights
+        return out, attention_weights
 
     def predict(
             self,
             sequence: torch.Tensor,
             seq_lengths: torch.Tensor,
-            top_k: int = 1) -> torch.Tensor:
+            top_k: int = 1) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Generates the top-k predictions for the next event in a sequence
         of events or churn based on sequence of events.
@@ -136,19 +136,19 @@ class RNNModel(nn.Module, ABC):
             lengths of the input sequences, excluding any padded values.
         :param int top_k: The number of top results to return.
 
-        :return torch.Tensor: A tensor of shape (batch_size, k) containing the\
-            indices of the top-k predicted events or churns \
-            for each input sequence.
+        :return tuple[torch.Tensor, torch.Tensor]: A tensor of shape\
+            (batch_size, k) containing the indices of the top-k predicted\
+            events or churns for each input sequence and attention weights.
         """
-        output, _ = self(sequence, seq_lengths)
+        output, attention_weights = self(sequence, seq_lengths)
         _, top_k_indices = torch.topk(output, top_k, dim=-1)
 
-        return top_k_indices
+        return top_k_indices, attention_weights
 
     def predict_proba(
             self,
             sequence: torch.Tensor,
-            seq_lengths: torch.Tensor) -> torch.Tensor:
+            seq_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Generates the probabilities for each class for the churn
         based on sequence of events.
@@ -157,14 +157,14 @@ class RNNModel(nn.Module, ABC):
         :param torch.Tensor seq_lengths: A tensor of integers representing the\
             lengths of the input sequences, excluding any padded values.
 
-        :return torch.Tensor: A tensor of shape (batch_size, num_classes) \
-            containing the probabilities for each class \
-            for each input sequence.
+        :return tuple[torch.Tensor, torch.Tensor]: A tensor of shape\
+            (batch_size, num_classes) containing the probabilities\
+            for each class for each input sequence and attention weights.
         """
-        output, _ = self(sequence, seq_lengths)
+        output, attention_weights = self(sequence, seq_lengths)
         probabilities = torch.softmax(output, dim=-1)
 
-        return probabilities
+        return probabilities, attention_weights
 
     def step(
             self,

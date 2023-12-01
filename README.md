@@ -56,5 +56,6 @@ The “customer_analysis” library, can be utilized in various business scenari
 
 
 #### TODO: 
-- Use a MLFlow to log model (artifacts) under specified run/experiment name (change from timestamp)
-- Save only best model (based on learning inmpovement) in training - override previous with current if better.
+- add option to specify (not local) path to liblary wheel - eg. can be used locally or in databricks as "/dbfs/FileStore/jars/lib_name_etc.whl",
+- split 'model_training_params' section in config.json into 'model_training_params' and 'pipeline_params'
+- add here screenshot from MLFlow server as example
