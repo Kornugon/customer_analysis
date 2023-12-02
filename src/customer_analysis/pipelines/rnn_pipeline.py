@@ -57,8 +57,8 @@ class RNNPipeline(NNPipeline):
             'shuffle_train_dataloader', True)
         self.eval_model = self.pipeline_params.get(
             'eval_model', True)
-        self.proba_thresold = self.pipeline_params.get(
-            'proba_thresold', 0.5)
+        self.prob_thresold = self.pipeline_params.get(
+            'prob_thresold', 0.5)
         self.return_churn_prob = self.pipeline_params.get(
             'return_churn_prob', False)
         self.save_attention_weights = self.pipeline_params.get(
@@ -410,7 +410,7 @@ class RNNPipeline(NNPipeline):
 
                 true_targets.extend(targets.tolist())
                 if self.task != 'events' and self.return_churn_prob:
-                    predictions, weights = rnn.predict_proba(
+                    predictions, weights = rnn.predict_prob(
                         inputs, seq_lengths)
                 else:
                     predictions, weights = rnn.predict(inputs, seq_lengths)
@@ -423,8 +423,8 @@ class RNNPipeline(NNPipeline):
 
             scores[f"{phase}_loss"] /= len(dataloader)
             predicted_targets_for_score = [
-                [int(proba[1] > self.proba_thresold)]
-                for proba in predicted_targets
+                [int(prob[1] > self.prob_thresold)]
+                for prob in predicted_targets
             ] if self.task != 'events' and self.return_churn_prob \
                 else predicted_targets
             if phase == 'train' and not self.eval_model:
@@ -434,7 +434,7 @@ class RNNPipeline(NNPipeline):
                     labels=true_targets,
                     predictions=predicted_targets_tensor,
                     metric=self.grid_metric,
-                    proba_thresold=self.proba_thresold)
+                    prob_thresold=self.prob_thresold)
             elif self.eval_model:
                 if not all(element == 0 for element in true_targets):
                     scores = self.evaluate(
@@ -445,7 +445,7 @@ class RNNPipeline(NNPipeline):
             if phase == 'test':
                 if self.return_churn_prob and self.task != 'events':
                     self.predicted_targets = [
-                        [round(proba[1], 4)] for proba in predicted_targets
+                        [round(prob[1], 4)] for prob in predicted_targets
                     ]
                 else:
                     self.predicted_targets = predicted_targets
@@ -485,8 +485,8 @@ class RNNPipeline(NNPipeline):
         :param str attention_type: The type of attention mechanism used\
             by the model.
         """
-        predictions = [int(proba[1] > self.proba_thresold)
-                       for proba in predictions]\
+        predictions = [int(prob[1] > self.prob_thresold)
+                       for prob in predictions]\
             if self.task != 'events' and self.return_churn_prob\
             else [int(p[0]) for p in predictions]
 

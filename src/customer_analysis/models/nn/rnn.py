@@ -147,7 +147,7 @@ class RNNModel(nn.Module, ABC):
 
         return top_k_indices, attention_weights
 
-    def predict_proba(
+    def predict_prob(
             self,
             sequence: torch.Tensor,
             seq_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:

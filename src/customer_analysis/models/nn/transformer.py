@@ -148,7 +148,7 @@ class TransformerModel(nn.Module, ABC):
 
         return top_k_indices, attention_weights
 
-    def predict_proba(
+    def predict_prob(
             self,
             sequence: torch.Tensor,
             inputs_mask: torch.Tensor

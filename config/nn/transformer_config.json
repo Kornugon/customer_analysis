@@ -17,7 +17,7 @@
                                     "early_stopping_patience": 3,
                                     "shuffle_train_dataloader": true,
                                     "eval_model": true,
-                                    "proba_thresold": 0.5,
+                                    "prob_thresold": 0.5,
                                     "return_churn_prob": true,
                                     "save_attention_weights": true,
                                     "grid_search_metric": "accuracy",

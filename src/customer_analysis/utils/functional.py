@@ -32,7 +32,7 @@ def pytorch_classification_metrics(
         predictions: torch.Tensor,
         metric: str,
         beta: float = 1.0,
-        proba_thresold: float = 0.5) -> float:
+        prob_thresold: float = 0.5) -> float:
     """
     Calculate the specified classification metric
     for given label and prediction lists using PyTorch.
@@ -43,7 +43,7 @@ def pytorch_classification_metrics(
     :param str metric: A string specifying the metric to calculate.
     :param float beta: The beta parameter for the F-beta score calculation.\
         Default: 1.0.
-    :param float proba_thresold: The probability threshold\
+    :param float prob_thresold: The probability threshold\
         for classifying an instance as positive. Default: 0.5.
 
     :return float: The calculated metric score.
@@ -52,7 +52,7 @@ def pytorch_classification_metrics(
 
     # Convert predicted probabilities (positive class) to binary predictions
     if predictions[0].ndim == 2:
-        predictions = (predictions[:, 1] > proba_thresold).long().unsqueeze(1)
+        predictions = (predictions[:, 1] > prob_thresold).long().unsqueeze(1)
 
     # Map metric names to calculation functions
     metric_functions = {

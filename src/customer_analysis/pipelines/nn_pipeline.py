@@ -32,8 +32,8 @@ class NNPipeline(ABC):
 
         self.device = torch.device(self.train_params.get('device', 'cpu'))
 
-        self.proba_thresold = self.pipeline_params.get(
-            'proba_thresold', 0.5)
+        self.prob_thresold = self.pipeline_params.get(
+            'prob_thresold', 0.5)
         self.grid_metric = self.pipeline_params.get(
             'grid_search_metric', 'accuracy')
 
@@ -82,7 +82,7 @@ class NNPipeline(ABC):
                 labels=true_targets,
                 predictions=predicted_targets_tensor,
                 metric=metric,
-                proba_thresold=self.proba_thresold)
+                prob_thresold=self.prob_thresold)
                 for metric in self._VALID_METRICS})
 
         return scores
