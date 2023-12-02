@@ -5,8 +5,8 @@ from torch import nn
 from customer_analysis.models.nn.rnn import RNNModel
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
                          attention_type, num_heads", [
     (20, 2, 5, 'cpu', 999, 'relu', 'global', 1),
     (25, 3, 6, 'cpu', 999, 'tanh', 'self', 1),
@@ -38,8 +38,8 @@ def test_RNNModel_init(hidden_size,
     assert model.attention_type == attention_type
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
                          attention_type, num_heads, inputs, seq_lengths", [
     (20, 2, 5, 'cpu', 999, 'relu', 'global', 1,
      torch.randn(3, max([4, 3, 2]), 1), [4, 3, 2]),
@@ -74,8 +74,8 @@ def test_RNNModel_forward(hidden_size,
     assert out.shape == (inputs.shape[0], num_classes)
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
                          attention_type, num_heads, inputs, seq_lengths, k", [
     (20, 2, 5, 'cpu', 999, 'relu', 'global', 1,
      torch.randn(3, max([4, 3, 2]), 1), [4, 3, 2], 1),
@@ -106,14 +106,14 @@ def test_RNNModel_predict(hidden_size,
                      attention_type=attention_type,
                      num_heads=num_heads)
 
-    predictions = model.predict(inputs.to(device), seq_lengths, k)
+    predictions, _ = model.predict(inputs.to(device), seq_lengths, k)
 
     assert predictions.shape == (inputs.shape[0], k)
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
-                         attention_type, num_heads, inputs, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
+                         attention_type, num_heads, inputs,\
                          seq_lengths, targets", [
     (20, 2, 5, 'cpu', 999, 'relu', 'global', 1,
      torch.randn(3, max([4, 3, 2]), 1), [4, 3, 2],
@@ -160,8 +160,8 @@ def test_RNNModel_step(hidden_size,
     assert isinstance(loss[0], float)
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
                          attention_type, num_heads, out", [
     (20, 2, 5, 'cpu', 999, 'relu', 'self', 1, torch.randn(3, 4, 20)),
     (25, 3, 6, 'cpu', 999, 'tanh', 'self', 1, torch.randn(3, 4, 25)),
@@ -189,7 +189,6 @@ def test_RNNModel_attention_self(hidden_size,
                      attention_type=attention_type,
                      num_heads=num_heads)
 
-    # Create a mask for the 'out' tensor
     mask = torch.ones(out.shape, dtype=torch.bool)
 
     result, _ = model._attention_self(out, mask)
@@ -197,8 +196,8 @@ def test_RNNModel_attention_self(hidden_size,
     assert result.shape == (out.shape[0], out.shape[2])
 
 
-@pytest.mark.parametrize("hidden_size, num_layers, num_classes, \
-                         device, padding_value, nonlinearity, \
+@pytest.mark.parametrize("hidden_size, num_layers, num_classes,\
+                         device, padding_value, nonlinearity,\
                          attention_type, num_heads, out", [
     (20, 2, 5, 'cpu', 999, 'relu', 'global', 1, torch.randn(3, 4, 20)),
     (25, 3, 6, 'cpu', 999, 'tanh', 'global', 1, torch.randn(3, 4, 25)),
@@ -226,7 +225,6 @@ def test_RNNModel_attention_global(hidden_size,
                      attention_type=attention_type,
                      num_heads=num_heads)
 
-    # Create a mask for the 'out' tensor
     mask = torch.ones(out.shape, dtype=torch.bool)
 
     result, _ = model._attention_global(out.to(device), mask.to(device))
@@ -263,7 +261,6 @@ def test_RNNModel_attention_multi_head(hidden_size,
                      attention_type=attention_type,
                      num_heads=num_heads)
 
-    # Create a mask for the 'out' tensor
     mask = torch.ones(out.shape, dtype=torch.bool)
 
     result, _ = model._attention_multi_head(out.to(device), mask.to(device))

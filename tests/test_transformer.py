@@ -5,8 +5,8 @@ from torch import nn
 from customer_analysis.models.nn.transformer import TransformerModel
 
 
-@pytest.mark.parametrize("input_size, model_size, num_layers, \
-                         dim_feedforward, device, num_heads, \
+@pytest.mark.parametrize("input_size, model_size, num_layers,\
+                         dim_feedforward, device, num_heads,\
                          dropout_rate, task", [
     (10, 20, 2, 40, 'cpu', 2, 0.05, 'events'),
     (15, 30, 3, 50, 'cpu', 3, 0.1, 'events'),
@@ -35,8 +35,8 @@ def test_TransformerModel_init(input_size,
     assert isinstance(model.fc, nn.Linear)
 
 
-@pytest.mark.parametrize("input_size, model_size, num_layers, \
-                         dim_feedforward, device, num_heads, \
+@pytest.mark.parametrize("input_size, model_size, num_layers,\
+                         dim_feedforward, device, num_heads,\
                          dropout_rate, task", [
     (10, 20, 2, 40, 'cpu', 2, .05, 'events'),
     (15, 30, 3, 50, 'cpu', 3, .1, 'events'),
@@ -70,8 +70,8 @@ def test_TransformerModel_forward(input_size,
     assert isinstance(out[1], list)
 
 
-@pytest.mark.parametrize("input_size, model_size, num_layers, \
-                         dim_feedforward,device, num_heads, \
+@pytest.mark.parametrize("input_size, model_size, num_layers,\
+                         dim_feedforward,device, num_heads,\
                          dropout_rate, sequence, inputs_mask", [
     (10, 20, 2, 40, 'cpu', 2, 0.05,
      torch.randint(0, 10, (4,)), torch.tensor([False]*4)),
@@ -99,14 +99,14 @@ def test_TransformerModel_predict(input_size,
                              num_heads=num_heads,
                              dropout_rate=dropout_rate)
 
-    prediction = model.predict(
+    prediction, _ = model.predict(
         sequence.unsqueeze(0), inputs_mask.unsqueeze(0))
 
     assert prediction in range(input_size)
 
 
-@pytest.mark.parametrize("input_size, model_size, num_layers, \
-                         dim_feedforward, device, num_heads, \
+@pytest.mark.parametrize("input_size, model_size, num_layers,\
+                         dim_feedforward, device, num_heads,\
                          dropout_rate, task, inputs, inputs_mask, targets", [
     (10, 20, 8, 40, 'cpu', 2, 0.05, 'events',
      torch.randint(0, 10, (3, 4)),
