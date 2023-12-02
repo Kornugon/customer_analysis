@@ -1,15 +1,15 @@
 import os
 import json
-from typing import Optional, Any
+from typing import Any
 from itertools import accumulate, dropwhile
 
 import pandas as pd
 
 
 def read_rnn_attention_data(
-        file_path: Optional[str] = None,
+        file_path: str,
         phase: str = 'train',
-        head_index: Optional[int] = None,
+        head_index: int = 0,
         batch_index: int = 0) -> dict[str, Any]:
     """
     Reads RNN attention data from a JSON file.
@@ -27,13 +27,12 @@ def read_rnn_attention_data(
                 }
             }
 
-    :param Optional[str] file_path: The path to the JSON file.\
-        If not given, the best model path in current run will be used.
-    :param str phase: The phase to read the data for.
-    :param Optional[int] head_index: The index of the head,\
-        to read the data for. Can be negative to index from the end.
+    :param str file_path: The path to the JSON file.
+    :param str phase: The phase to read the data for. Default: 'train'.
+    :param int head_index: The index of the head, to read the data for.\
+        Can be negative to index from the end. Default: 0.
     :param int batch_index: The index of the batch to read the data for.\
-        Can be negative to index from the end.
+        Can be negative to index from the end. Default: 0.
 
     :return dict[str, Any]: A dictionary containing the attention data\
         for the specified batch.
@@ -97,9 +96,9 @@ def read_rnn_attention_data(
 
 
 def read_transformer_attention_data(
-        file_path: Optional[str] = None,
+        file_path: str,
         phase: str = 'train',
-        head_index: Optional[int] = None,
+        head_index: int = 0,
         batch_index: int = 0) -> dict[str, Any]:
     """
     Reads Transformer attention data from a JSON file.
@@ -116,13 +115,12 @@ def read_transformer_attention_data(
                 }
             }
 
-    :param Optional[str] file_path: The path to the JSON file.\
-        If not given, the best model path in current run will be used.
-    :param str phase: The phase to read the data for.
-    :param Optional[int] head_index: The index of the head,\
-        to read the data for. Can be negative to index from the end.
+    :param str file_path: The path to the JSON file.
+    :param str phase: The phase to read the data for. Default: 'train'.
+    :param int head_index: The index of the head, to read the data for.\
+        Can be negative to index from the end. Default: 0.
     :param int batch_index: The index of the batch to read the data for.\
-        Can be negative to index from the end.
+        Can be negative to index from the end. Default: 0.
 
     :raises FileNotFoundError: Raises when file does not exist.
     :raises ValueError: Raises when phase is invalid.
@@ -191,8 +189,7 @@ def get_sequences_above_weights_threshold(
         head_data: dict[str, Any],
         idx2event: dict[int, str],
         weights_threshold: float = 0.55,
-        min_events: int = 2
-) -> pd.DataFrame:
+        min_events: int = 2) -> pd.DataFrame:
     """
     This function returns a pandas DataFrame where each row corresponds
     to a sequence of events where the sum of attention weights is greater
@@ -212,8 +209,7 @@ def get_sequences_above_weights_threshold(
     """
     def _get_sequences(
             sequence: list[int],
-            weights: list[float]
-    ) -> list[list[str]]:
+            weights: list[float]) -> list[list[str]]:
         """
         This function returns a list of sequences where each sequence
         is a list of events and the sum of attention weights for each

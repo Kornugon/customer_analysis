@@ -14,11 +14,11 @@ from torch.optim import Optimizer, AdamW
 from torch.utils.data import Dataset, DataLoader
 
 from customer_analysis.utils.mlflow_functions import MLFlowManager
-from customer_analysis.utils.functional import parameter_search, \
-    pytorch_classification_metrics
+from customer_analysis.utils.functional import (
+    parameter_search, pytorch_classification_metrics)
 from customer_analysis.models.nn import TransformerModel
-from customer_analysis.pipelines.nn_pipeline import NNPipeline, \
-    IncorrectConfig, ModelNotFitted
+from customer_analysis.pipelines.nn_pipeline import (
+    NNPipeline, IncorrectConfig, ModelNotFitted)
 
 
 class TransformerPipeline(NNPipeline):
@@ -33,10 +33,10 @@ class TransformerPipeline(NNPipeline):
             padding_value: int,
             model_name: str = 'TransformerModel') -> None:
         """
-        :param str config_path: The path to the file containing \
+        :param str config_path: The path to the file containing\
             the training parameters.
         :param int input_size: The number of expected features in the input.
-        :param int padding_value: The value used to pad the input sequences \
+        :param int padding_value: The value used to pad the input sequences\
             to the same length.
         :param str model_name: Model name. Default: 'TransformerModel'.
         """
@@ -44,22 +44,31 @@ class TransformerPipeline(NNPipeline):
         self.padding_value = padding_value
         self.model_name = model_name
 
-        self.model_params, self.train_params, self.grid_search_params, \
-            self.mlflow_config = self.load(config_path)
+        self.model_params, self.train_params, \
+            self.pipeline_params, self.grid_search_params, \
+            self.mlflow_config = self._load(config_path)
         self.best_params = self.model_params
-        self.best_score = -torch.inf
 
+        self.task = self.train_params.get('task', 'events')
         self.device = torch.device(self.train_params.get('device', 'cpu'))
         self.loss_func = nn.CrossEntropyLoss()
-        self.eval_model = self.train_params['eval_model']
-        self.task = self.train_params.get('task', 'events')
 
-        self.grid_metric = self.train_params.get(
-            'grid_search_metric', 'accuracy')
-        self.proba_thresold = self.train_params.get(
+        self.early_stopping_patience = self.pipeline_params.get(
+            'early_stopping_patience', 5)
+        self.shuffle_train_data = self.pipeline_params.get(
+            'shuffle_train_dataloader', True)
+        self.eval_model = self.pipeline_params.get(
+            'eval_model', True)
+        self.proba_thresold = self.pipeline_params.get(
             'proba_thresold', 0.5)
-        self.return_churn_prob = self.train_params.get(
+        self.return_churn_prob = self.pipeline_params.get(
             'return_churn_prob', False)
+        self.save_attention_weights = self.pipeline_params.get(
+            'save_attention_weights', True)
+        self.grid_metric = self.pipeline_params.get(
+            'grid_search_metric', 'accuracy')
+        self.model_path = self.pipeline_params.get(
+            'model_artifacts_path', 'artifacts')
 
         # Model __init__ parameters for filtering .json config file.
         model_init_params = inspect.signature(TransformerModel.__init__)
@@ -67,13 +76,11 @@ class TransformerPipeline(NNPipeline):
             param.name for param in model_init_params.parameters.values()
             if param.name != 'self']
 
-        self.save_attention_weights = self.train_params.get(
-            'save_attention_weights', True)
-        self.model_path = self.train_params.get(
-            'model_artifacts_path', 'artifacts')
+        self.best_score = -torch.inf
         self.predicted_targets = []
-        self.pretrained_model_on_predict = False
         self.model_fitted = False
+        self.pretrained_model_on_predict = False
+
         self.mlflow_manager = MLFlowManager(
             self.model_name, self.mlflow_config) \
             if self.mlflow_config['enable'] else None
@@ -103,7 +110,7 @@ class TransformerPipeline(NNPipeline):
             _ = TransformerModel(**filtered_params)
         except Exception as exc:
             raise IncorrectConfig(
-                "Cannot initialize model from 'model_init_params' \
+                "Cannot initialize model from 'model_init_params'\
                     see Traceback for details") from exc
 
     def fit(
@@ -116,13 +123,11 @@ class TransformerPipeline(NNPipeline):
         over the specified parameter grid to find the best combination
         of parameters for the model.
 
-        :param list[torch.Tensor] sequences: Input sequences list of tensors.
-        :param Optional[list[torch.Tensor]] targets: List of target tensors. \
-            Default: None.
+        :param Dataset data: Input sequences Dataset for training purpose.
+        :param Optional[Dataset] validation_data: Input sequences Dataset\
+            for validation purpose. Default: None.
 
-        :raises ValueError: Raises error mlflow_config is not \
-            present or lacks of "enable".
-        :raises ValueError: Raises error if training parameters \
+        :raises ValueError: Raises error if training parameters\
             has not been provided.
         """
         dataloaders = {
@@ -130,7 +135,7 @@ class TransformerPipeline(NNPipeline):
                 data,
                 batch_size=self.train_params['batch_size'],
                 num_workers=self.train_params['num_workers'],
-                shuffle=self.train_params['shuffle_train_dataloader'])
+                shuffle=self.shuffle_train_data)
         }
         if validation_data:
             dataloaders['val'] = DataLoader(
@@ -190,7 +195,7 @@ class TransformerPipeline(NNPipeline):
                 if scores[self.grid_metric] > self.best_score:
                     self.best_score = scores[self.grid_metric]
                     self.best_params = parameters | self.train_params
-                    self.save_model(model, self.best_model_path + '.pth')
+                    self._save_model(model, self.best_model_path + '.pth')
                     if self.save_attention_weights:
                         shutil.copyfile(
                             f'{self.best_model_path}_temporary.json',
@@ -212,12 +217,12 @@ class TransformerPipeline(NNPipeline):
         """
         Predict function.
 
-        :param list[torch.Tensor] predict_data: Input sequences.
-        :param Optional[str] model_path: The path to a pre-trained model \
-            to be loaded. If not provided, the best model found during \
+        :param Dataset predict_data: Input sequences Dataset for prediction.
+        :param Optional[str] model_path: The path to a pre-trained model\
+            to be loaded. If not provided, the best model found during\
             training will be used. Default: None.
 
-        :raises ModelNotFitted: Raises when model was not fitted \
+        :raises ModelNotFitted: Raises when model was not fitted\
             and path to already trained model was not provided.
 
         :return list[int]: The list of predicted events or churn.
@@ -251,7 +256,7 @@ class TransformerPipeline(NNPipeline):
                         torch.load(self.best_model_path + '.pth'))
             except Exception as exc:
                 raise ModelNotFitted(
-                    "Fit model to the data first or provide 'model_path' to \
+                    "Fit model to the data first or provide 'model_path' to\
                         already trained model.") from exc
 
         lr = 0.001 if self.pretrained_model_on_predict \
@@ -333,15 +338,15 @@ class TransformerPipeline(NNPipeline):
                 else:
                     epochs_without_improvement += 1
                     if epochs_without_improvement >= \
-                            self.train_params['early_stopping_patience']:
-                        self.train_val_info(epoch_progr, metrics)
+                            self.early_stopping_patience:
+                        self._train_val_info(epoch_progr, metrics)
                         print(f'Early stop at epoch {epoch + 1}!')
                         self.early_stop_epoch = epoch + 1
                         break
 
             if (epoch + 1) % self._SHOW_LOSS_INFO_STEP == 0 \
                     or epoch == num_epochs - 1:
-                self.train_val_info(epoch_progr, metrics)
+                self._train_val_info(epoch_progr, metrics)
 
         transformer.load_state_dict(best_model_params)
 
@@ -367,7 +372,7 @@ class TransformerPipeline(NNPipeline):
         :param float reg_lambda: The regularization parameter. Default: 0.0.
         :param Optional[str] reg_type: The type of regularization to be used.\
             Can be ['L1', 'L2']. Default: None.
-        :param Optional[str] epoch_progr: Epoch phase string descriptor. \
+        :param Optional[str] epoch_progr: Epoch phase string descriptor.\
             Default: None.
 
         :return dict[str, float]: Phase metrics.

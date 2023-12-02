@@ -5,8 +5,8 @@ import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 
-from customer_analysis.models.nn._transformer import \
-    TransformerEncoderLayer, TransformerEncoder, PositionalEncoder
+from customer_analysis.models.nn._transformer import (
+    TransformerEncoderLayer, TransformerEncoder, PositionalEncoder)
 
 
 class TransformerModel(nn.Module, ABC):
@@ -39,14 +39,15 @@ class TransformerModel(nn.Module, ABC):
         :param int model_size: The dimension of the model.
         :param int num_layers: The number of encoder layers.
         :param int dim_feedforward: The dimension of the feedforward network.
-        :param torch.device device: Selected compute device from \
+        :param torch.device device: Selected compute device from\
             [`cpu`, `cuda`].
         :param int num_heads: The number of attention heads. Default: 2.
-        :param float dropout_rate: The dropout rate, Default: 0..
+        :param float dropout_rate: The dropout rate. Default: 0.1.
         :param list[float] weights_init_range: The range for uniform\
-            distribution from which, weights are initialized.
-        :param str task: The task for which the model is being used. \
-            Can be either 'churn' for binary classification or 'events' \
+            distribution from which, weights are initialized.\
+            Default: [-0.1, 0.1].
+        :param str task: The task for which the model is being used.\
+            Can be either 'churn' for binary classification or 'events'\
             for event prediction. Default: 'events'.
 
         Input shape
@@ -134,10 +135,10 @@ class TransformerModel(nn.Module, ABC):
         Generates a prediction for the next event in a sequence of events
         or churn based on sequence of events.
 
-        :param torch.Tensor x: The input data.
+        :param torch.Tensor sequence: The input data.
         :param torch.Tensor inputs_mask: A boolean mask that indicates\
             true and padded values.
-        :param int top_k: The number of top results to return.
+        :param int top_k: The number of top results to return. Default: 1.
 
         :return tuple[torch.Tensor, list[torch.Tensor]]: The predicted index\
             of event or churn and attention weights.
@@ -156,7 +157,7 @@ class TransformerModel(nn.Module, ABC):
         Generates the probabilities for each class for the churn
         based on sequence of events.
 
-        :param torch.Tensor x: The input data.
+        :param torch.Tensor sequence: The input data.
         :param torch.Tensor inputs_mask: A boolean mask that indicates\
             true and padded values.
 

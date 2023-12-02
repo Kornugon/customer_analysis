@@ -1,9 +1,10 @@
 from typing import Optional
 
-import pandas as pd
 import torch
+import pandas as pd
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import Dataset, TensorDataset
+from torch.utils.data import (
+    Dataset, TensorDataset)
 
 
 class EventSequenceDataPreparation(Dataset):
@@ -24,26 +25,26 @@ class EventSequenceDataPreparation(Dataset):
             n_last_events: int = 1000,
             include_test_targets: bool = True,
             train_size: float = 0.7,
-            val_size: float = 0.15):
+            val_size: float = 0.15) -> None:
         """
         :param int padding_value: The value to use for padding.
-        :param dict[str, int] event2idx: A dictionary that maps \
+        :param dict[str, int] event2idx: A dictionary that maps\
             event names to indices.
         :param pd.DataFrame input_df: An input DataFrame.
-        :param str sequence_column: The name of the column in the \
+        :param str sequence_column: The name of the column in the\
             DataFrame that contains the sequences.
-        :param Optional[str] target_column: The name of the column in the \
+        :param Optional[str] target_column: The name of the column in the\
             DataFrame that contains the targets. Default: None.
-        :param str model_type: The type of model to use. Must be one of \
+        :param str model_type: The type of model to use. Must be one of\
             'rnn' or 'transformer'. Default: 'rnn'.
-        :param int n_last_events: Amount of latest events to keep. \
+        :param int n_last_events: Amount of latest events to keep.\
             Default: 1000.
-        :param bool include_test_targets: Whether to include the real targets \
+        :param bool include_test_targets: Whether to include the real targets\
             for the test set or not. Default: True.
-        :param float train_size: The proportion of the data to use \
+        :param float train_size: The proportion of the data to use\
             for training. Default: 0.7.
-        :param float val_size: The proportion of the data to use f\
-            or validation. Default: 0.15.
+        :param float val_size: The proportion of the data to use\
+            for validation. Default: 0.15.
         """
         self.padding_value = padding_value
         self.event2idx = event2idx
@@ -58,7 +59,8 @@ class EventSequenceDataPreparation(Dataset):
 
         self.datasets_dict = self._prepare_data()
 
-    def __len__(self) -> int:
+    def __len__(
+            self) -> int:
         """
         Returns the length of the dataset.
 
@@ -66,24 +68,27 @@ class EventSequenceDataPreparation(Dataset):
         """
         return len(self.datasets_dict)
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, ...]:
+    def __getitem__(
+            self,
+            idx: int) -> tuple[torch.Tensor, ...]:
         """
         Returns a tuple of tensors for the given index.
 
         :param int idx: The index to retrieve.
 
-        :return tuple[torch.Tensor, ...]: A tuple of tensors for the \
-            given index,containing the padded sequence, the target, \
+        :return tuple[torch.Tensor, ...]: A tuple of tensors for the\
+            given index,containing the padded sequence, the target,\
             and optionally the sequence length.
         """
         return self.datasets_dict[idx]
 
-    def _prepare_data(self) -> dict[str, TensorDataset]:
+    def _prepare_data(
+            self) -> dict[str, TensorDataset]:
         """
         Prepares a dictionary that maps phase names ['train', 'val', 'test']
         to TensorDatasets for each phase from the input DataFrame.
 
-        :return dict[str, TensorDataset]: A dictionary that maps phase names \
+        :return dict[str, TensorDataset]: A dictionary that maps phase names\
             ['train', 'val', 'test'] to TensorDatasets for each phase.
         """
         self.input_df[self.sequence_column] = self.input_df[
@@ -100,8 +105,8 @@ class EventSequenceDataPreparation(Dataset):
         return datasets_dict
 
     def _split_data(
-        self,
-        input_df: pd.DataFrame
+            self,
+            input_df: pd.DataFrame
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Splits the input DataFrame into train, validation,
@@ -109,8 +114,8 @@ class EventSequenceDataPreparation(Dataset):
 
         :param pd.DataFrame input_df: An input DataFrame.
 
-        :return tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple \
-            containing DataFrames for train, validation and \
+        :return tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple\
+            containing DataFrames for train, validation and\
             test sets respectively.
         """
         len_data = len(input_df)
@@ -134,7 +139,7 @@ class EventSequenceDataPreparation(Dataset):
         :raises ValueError: Raises when model has any sequence\
            with just one or less events, for next event prediction.
 
-        :return TensorDataset: A TensorDataset containing prepared data from \
+        :return TensorDataset: A TensorDataset containing prepared data from\
             an input DataFrame.
         """
         sequences = df[self.sequence_column].tolist()

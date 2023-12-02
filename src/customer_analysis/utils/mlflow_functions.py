@@ -4,8 +4,8 @@ import time
 import subprocess
 from typing import Any, Optional, Union
 
-import torch.nn as nn
 import mlflow
+import torch.nn as nn
 from mlflow.tracking.fluent import ActiveRun
 from mlflow.utils.environment import _mlflow_conda_env
 
@@ -41,7 +41,7 @@ class MLFlowManager:
             the MLflow server.
         """
         if self.config['use_local_server']:
-            local_port = self.config.get('local_port', 5000)
+            local_port = self.config.get('local_server_port', 5000)
             command = ["mlflow", "ui", "--port", str(local_port)]
             process = subprocess.Popen(
                 command,
@@ -171,7 +171,7 @@ class MLFlowManager:
         :param bool arch_exis_ver: If True, archive existing versions of the\
             model in the stage being transitioned to. Default: False.
         :param Optional[str] model_stage: Stage to transition the model\
-            version to. Options are: ['None', 'Staging', 'Production', \
+            version to. Options are: ['None', 'Staging', 'Production',\
             'Archived']. Default: None.
         :param Optional[str] model_descrip: Description to update the model\
             version with. Default: None.
@@ -325,21 +325,23 @@ class MLFlowManager:
         Get the wheel file path.
 
         :raises FileNotFoundError: Raises if the library wheel file\
-            is not found in the path.
+            has not been found.
 
         :return list[str]: List containing the wheel file path.
         """
-        # TODO: add option to specify full path in config, eg. for databricks
+        first_choice_path = self.config.get('whl_other_path', "")
         local_path = os.path.abspath(__file__)
-        whl_path = os.path.abspath(
+        local_path = os.path.abspath(
             os.path.join(local_path, *([os.pardir] * 4))
-        ) + self.config['local_whl']
+        ) + self.config['whl_local_path']
 
-        try:
-            os.stat(whl_path)
-        except Exception:
+        whl_path = next(
+            (path for path in [first_choice_path, local_path]
+             if os.path.exists(path)), None)
+
+        if whl_path is None:
             raise FileNotFoundError(
-                f"Library wheel file not found in '{whl_path}' path.")
+                "Library wheel file not found.")
 
         return [whl_path]
 
@@ -391,7 +393,7 @@ class MLFlowManager:
         :param str model_name: Registered model name.
         :param str id_run: Current run ID.
         :param Optional[str] model_descrip: Description to update the model\
-            version with. If not provided, the description is not updated.
+            version with. Default: None.
         """
         time.sleep(0.5)  # in purpose to not mix print messages
         _info = 'Adding model libraries to registered model. '

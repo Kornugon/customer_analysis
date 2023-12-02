@@ -14,7 +14,7 @@ class TransformerEncoderLayer(nn.Module):
 
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048,
                  dropout: float = 0.1, activation: str = "relu",
-                 batch_first: bool = False):
+                 batch_first: bool = False) -> None:
         super(TransformerEncoderLayer, self).__init__()
         self.self_attn = nn.MultiheadAttention(
             d_model, nhead, dropout=dropout, batch_first=batch_first)
@@ -56,7 +56,7 @@ class TransformerEncoder(nn.Module):
     """
     __constants__ = ['norm']
 
-    def __init__(self, encoder_layer, num_layers, norm=None):
+    def __init__(self, encoder_layer, num_layers, norm=None) -> None:
         super(TransformerEncoder, self).__init__()
         self.layers = _get_clones(encoder_layer, num_layers)
         self.num_layers = num_layers
@@ -99,10 +99,6 @@ class PositionalEncoder(nn.Module):
 
     :ref: LANGUAGE MODELING WITH NN.TRANSFORMER AND TORCHTEXT
         <https://pytorch.org/tutorials/beginner/transformer_tutorial.html>
-
-    :param  intmodel_size: The dimension of the model.
-    :param float dropout: The dropout rate. Default: 0.1.
-    :param int max_len: The maximum length of the sequence. Default: 1000.
     """
 
     def __init__(
@@ -110,6 +106,12 @@ class PositionalEncoder(nn.Module):
             model_size: int,
             dropout: float = 0.1,
             max_len: int = 1000) -> None:
+        """
+        :param int model_size: The dimension of the model.
+        :param float dropout: The dropout rate. Default: 0.1.
+        :param int max_len: The maximum length of the sequence. Default: 1000.
+
+        """
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -130,10 +132,10 @@ class PositionalEncoder(nn.Module):
         """
         Forward pass of the PositionalEncoder.
 
-        :param torch.Tensor x: Input tensor of shape\
+        :param torch.Tensor seq: Input tensor of shape\
             (seq_len, batch_size, embedding_dim).
 
-        :return torch.Tensor: Sum of positional encodings and\
-            the input tensor.
+        :return torch.Tensor: Sum of positional encodings\
+            and the input tensor.
         """
         return self.dropout(seq + self.pos_encod[:seq.size(0), :])

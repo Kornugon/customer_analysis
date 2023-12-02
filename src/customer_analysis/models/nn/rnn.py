@@ -4,7 +4,8 @@ from typing import Optional, Any
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import (
+    pack_padded_sequence, pad_packed_sequence)
 
 
 class RNNModel(nn.Module, ABC):
@@ -36,9 +37,9 @@ class RNNModel(nn.Module, ABC):
         :param int hidden_size: The number of features in the hidden state.
         :param int num_layers: Number of recurrent layers.
         :param int num_classes: Number of classes for classification.
-        :param torch.device device: Selected compute device from \
+        :param torch.device device: Selected compute device from\
             [`cpu`, `cuda`].
-        :param int padding_value: The value used to pad the input sequences \
+        :param int padding_value: The value used to pad the input sequences\
             to the same length.
         :param str nonlinearity: The non-linearity to use.\
             Can be ['tanh', 'relu']. Default: 'relu'.
@@ -85,7 +86,8 @@ class RNNModel(nn.Module, ABC):
     def forward(
             self,
             seq: torch.Tensor,
-            seq_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+            seq_lengths: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         :param torch.Tensor seq: The input sequence data.
         :param torch.Tensor seq_lengths: A tensor of integers representing the\
@@ -131,10 +133,10 @@ class RNNModel(nn.Module, ABC):
         Generates the top-k predictions for the next event in a sequence
         of events or churn based on sequence of events.
 
-        :param torch.Tensor x: The input data.
+        :param torch.Tensor sequence: The input data.
         :param torch.Tensor seq_lengths: A tensor of integers representing the\
             lengths of the input sequences, excluding any padded values.
-        :param int top_k: The number of top results to return.
+        :param int top_k: The number of top results to return. Default: 1.
 
         :return tuple[torch.Tensor, torch.Tensor]: A tensor of shape\
             (batch_size, k) containing the indices of the top-k predicted\
@@ -153,7 +155,7 @@ class RNNModel(nn.Module, ABC):
         Generates the probabilities for each class for the churn
         based on sequence of events.
 
-        :param torch.Tensor x: The input data.
+        :param torch.Tensor sequence: The input data.
         :param torch.Tensor seq_lengths: A tensor of integers representing the\
             lengths of the input sequences, excluding any padded values.
 
@@ -181,7 +183,7 @@ class RNNModel(nn.Module, ABC):
 
         :param str phase: The phase of the training - ['train', 'val', "test"].
         :param torch.Tensor inputs: The input data.
-        :param torch.Tensor seq_lengths: A tensor representing the \
+        :param torch.Tensor seq_lengths: A tensor representing the\
             lengths of the input sequences, excluding any padded values.
         :param torch.Tensor targets: The target data.
         :param nn.Module loss_func: The loss function to use.
@@ -344,23 +346,23 @@ class RNNModel(nn.Module, ABC):
 
         if args['hidden_size'] <= 0:
             raise ValueError(
-                f"Parameter 'hidden_size' has to be positive integer. \
+                f"Parameter 'hidden_size' has to be positive integer.\
                 Received hidden_size={args['hidden_size']}.")
         if args['num_layers'] <= 0:
             raise ValueError(
-                f"Parameter 'num_layers' has to be positive integer. \
+                f"Parameter 'num_layers' has to be positive integer.\
                 Received num_layers={args['num_layers']}.")
         if args['num_classes'] <= 0:
             raise ValueError(
-                f"Parameter 'num_classes' has to be positive integer. \
+                f"Parameter 'num_classes' has to be positive integer.\
                 Received num_classes={args['num_classes']}.")
         if args['num_heads'] <= 0:
             raise ValueError(
-                f"Parameter 'num_heads' has to be positive integer. \
+                f"Parameter 'num_heads' has to be positive integer.\
                 Received num_heads={args['num_heads']}.")
         if args['padding_value'] <= 0:
             raise ValueError(
-                f"Parameter 'padding_value' has to be positive integer. \
+                f"Parameter 'padding_value' has to be positive integer.\
                 Received padding_value={args['padding_value']}.")
         if args['nonlinearity'] not in nonlinearity_options:
             raise ValueError(

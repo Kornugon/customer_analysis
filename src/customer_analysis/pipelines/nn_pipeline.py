@@ -24,17 +24,18 @@ class NNPipeline(ABC):
             model_name: str) -> None:
 
         self.model_name = model_name
-        self.model_params, self.train_params, self.grid_search_params, \
-            self.mlflow_config = self.load(config_path)
+
+        self.model_params, self.train_params, \
+            self.pipeline_params, self.grid_search_params, \
+            self.mlflow_config = self._load(config_path)
         self.best_params = self.model_params
+
         self.device = torch.device(self.train_params.get('device', 'cpu'))
-        self.grid_metric = self.train_params.get(
-            'grid_search_metric', 'accuracy')
-        self.proba_thresold = self.train_params.get(
+
+        self.proba_thresold = self.pipeline_params.get(
             'proba_thresold', 0.5)
-        self.return_churn_proba = self.train_params.get(
-            'return_churn_proba', False)
-        self.local_port = self.mlflow_config.get('local_port', 5000)
+        self.grid_metric = self.pipeline_params.get(
+            'grid_search_metric', 'accuracy')
 
     def fit(
             self,
@@ -44,6 +45,8 @@ class NNPipeline(ABC):
         This method takes in a list of tensor data and performs a grid-search
         over the specified parameter grid to find the best combination
         of parameters for the model.
+
+        :param Dataset data: Input sequences Dataset for training purpose.
         """
         pass
 
@@ -52,6 +55,10 @@ class NNPipeline(ABC):
             predict_data: Dataset) -> list[int]:
         """
         Predict function.
+
+        :param Dataset predict_data: Input sequences Dataset for prediction.
+
+        :return list[int]: The list of predicted events or churn.
         """
         pass
 
@@ -80,7 +87,7 @@ class NNPipeline(ABC):
 
         return scores
 
-    def train_val_info(
+    def _train_val_info(
             self,
             epoch_progr: str,
             metrics: dict[str, float]) -> None:
@@ -101,7 +108,7 @@ class NNPipeline(ABC):
         progress += f"{grid_metr:.3f}."
         print(progress)
 
-    def save_model(
+    def _save_model(
             self,
             model: nn.Module,
             model_path: str) -> None:
@@ -116,10 +123,10 @@ class NNPipeline(ABC):
             os.makedirs(dir_name)
         torch.save(model.state_dict(), model_path)
 
-    def load(self, config_path: SyntaxWarning
-             ) -> tuple[dict[str, Any],
-                        Union[dict[str, Any], None],
-                        Union[dict[str, Any], None]]:
+    def _load(self, config_path: SyntaxWarning
+              ) -> tuple[dict[str, Any],
+                         Union[dict[str, Any], None],
+                         Union[dict[str, Any], None]]:
         if isinstance(config_path, str):
             with open(config_path, 'r') as f:
                 config_params = json.load(f)
@@ -130,6 +137,7 @@ class NNPipeline(ABC):
 
         return config_params['model_init_params'], \
             config_params.get('model_training_params'), \
+            config_params.get('pipeline_params'), \
             config_params.get('grid_search_params'), \
             config_params.get('mlflow_config')
 
