@@ -13,12 +13,12 @@ from torch.nn.functional import softmax
 from torch.optim import Optimizer, AdamW
 from torch.utils.data import Dataset, DataLoader
 
-from customer_analysis.utils.mlflow_functions import MLFlowManager
-from customer_analysis.utils.functional import (
-    parameter_search, pytorch_classification_metrics)
 from customer_analysis.models.nn import TransformerModel
 from customer_analysis.pipelines.nn_pipeline import (
     NNPipeline, IncorrectConfig, ModelNotFitted)
+from customer_analysis.utils.mlflow_functions import MLFlowManager
+from customer_analysis.utils.functional import (
+    parameter_search, pytorch_classification_metrics)
 
 
 class TransformerPipeline(NNPipeline):

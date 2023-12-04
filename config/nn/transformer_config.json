@@ -3,13 +3,13 @@
         {
             "model_init_params": {
                                     "model_size":128,
-                                    "num_layers": 6,
+                                    "num_layers": 8,
                                     "dim_feedforward": 512
                                 },
             "model_training_params": {
-                                    "task": "churn",
+                                    "task": "events",
                                     "device": "cuda",
-                                    "num_epochs": 2,
+                                    "num_epochs": 45,
                                     "batch_size": 32,
                                     "num_workers": 4
                                 },
@@ -25,11 +25,11 @@
                                 },
             "grid_search_params": {
                                     "num_heads": [4],
-                                    "dropout_rate": [0.05],
+                                    "dropout_rate": [0.005],
                                     "reg_type":["L2"],
-                                    "reg_lambda":  [0.005],
-                                    "learning_rate": [0.0005, 0.0007, 0.001, 0.01],
-                                    "weights_init_range": [[-0.1, 0.1]]
+                                    "reg_lambda":  [0.0065, 0.007, 0.01],
+                                    "learning_rate": [0.0036, 0.0044],
+                                    "weights_init_range": [[-0.3, 0.3]]
                                   },
             "mlflow_config":    {
                                     "enable": true,
