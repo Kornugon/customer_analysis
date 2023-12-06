@@ -419,7 +419,8 @@ class MLFlowManager:
             description=desc)
         self.model_staging(
             model_version=self.registered_model_version,
-            model_name=model_name)
+            model_name=model_name,
+            model_stage='Staging')
 
 
 class ModelNotFound(Exception):

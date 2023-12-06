@@ -34,6 +34,7 @@ For churn prediction task, plots are shown below. Both plots are based on RNN pr
 In the *config.json* file, you can activate the use of MLFlow for logging model parameters and metrics during the training or prediction phase. To activate MLFlow, set "enable" to true. It is also possible to use a local server for logging and specify its port. If "use_local_server" is set to true, then the local server will be set up for the training/validation phase and also for prediction, and will be turned off afterwards. You can turn on the local server again by using the command "*mlflow ui --port 5000*" in the terminal or other specified port. MLFlow UI allows to view recorded experiments and registered models as it is shown on below pictures.
 ![Screenshot](_readme_pictures/MLFlow_exp.png)\
 ![Screenshot](_readme_pictures/MLFlow_model.png)\
+![Screenshot](_readme_pictures/MLFlow_staging.png)\
 In the *config.json* file, you can also specify the path for saving PyTorch artifacts, set up an "*early_stopping_patience*", or decide whether to return churn probability with the "*return_churn_prob*" parameter. It is also possible to specify the grid search metric from one of the following options: ["accuracy", "precision", "recall", "f1"]. This determines which metric will be used to consider one model as the best among others with different hyperparameter setups during the grid-search phase. Please note, that not all parameters have been mentioned here, in the readme file.
 
 ### Installation

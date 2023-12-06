@@ -40,7 +40,7 @@
                                     "regis_model_on_predict": true,
                                     "await_registration_for": 10,
                                     "whl_local_path": "/dist/customer_analysis-0.0.1.dev0-py3-none-any.whl",
-                                    "whl_other_path": "",
+                                    "whl_other_path": "/dbfs/FileStore/jars/e62b9c0e_d13c_43d4_8350_2cea9f42614b/customer_analysis-0.0.1.dev0-py3-none-any.whl",
                                     "regis_model_descrip": "",
                                     "serve_regis_model_on_predict": true,
                                     "tags": {}

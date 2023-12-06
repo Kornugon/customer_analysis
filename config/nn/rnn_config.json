@@ -7,7 +7,7 @@
                                     "num_heads": 12
                                 },
             "model_training_params": {
-                                    "task": "churn",
+                                    "task": "events",
                                     "device": "cuda",
                                     "num_epochs": 35,
                                     "batch_size": 32,
@@ -27,9 +27,9 @@
                                     "nonlinearity": ["relu", "tanh"],
                                     "attention_type": ["multi-head", "global", "self"],
                                     "reg_type":["L2"],
-                                    "reg_lambda":  [0.00015, 0.001],
-                                    "learning_rate": [0.0011, 0.0031]
-                                  },   
+                                    "reg_lambda":  [0.0001, 0.00015, 0.0002],
+                                    "learning_rate": [0.0011, 0.0021]
+                                  },
             "mlflow_config":    {
                                     "enable": true,
                                     "log_model_file": true,
@@ -39,7 +39,7 @@
                                     "regis_model_on_predict": true,
                                     "await_registration_for": 10,
                                     "whl_local_path": "/dist/customer_analysis-0.0.1.dev0-py3-none-any.whl",
-                                    "whl_other_path": "",
+                                    "whl_other_path": "/dbfs/FileStore/jars/e62b9c0e_d13c_43d4_8350_2cea9f42614b/customer_analysis-0.0.1.dev0-py3-none-any.whl",
                                     "regis_model_descrip": "",
                                     "serve_regis_model_on_predict": true,
                                     "tags": {}
