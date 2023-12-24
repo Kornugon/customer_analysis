@@ -1,0 +1,61 @@
+{
+    "RNNModel": {
+        "model_init_params": {
+            "hidden_size": 128,
+            "num_layers": 2,
+            "num_heads": 12
+        },
+        "model_training_params": {
+            "task": "churn",
+            "device": "cuda",
+            "num_epochs": 16,
+            "batch_size": 32,
+            "num_workers": 8
+        },
+        "pipeline_params": {
+            "early_stopping_patience": 3,
+            "shuffle_train_dataloader": true,
+            "eval_model": true,
+            "prob_thresold": 0.5,
+            "return_churn_prob": true,
+            "save_attention_weights": true,
+            "grid_search_metric": "accuracy",
+            "model_artifacts_path": "artifacts"
+        },
+        "grid_search_params": {
+            "nonlinearity": [
+                "tanh"
+            ],
+            "attention_type": [
+                "multi-head",
+                "global",
+                "self"
+            ],
+            "reg_type": [
+                "L2"
+            ],
+            "reg_lambda": [
+                0.00015,
+                0.001
+            ],
+            "learning_rate": [
+                0.0011,
+                0.0031
+            ]
+        },
+        "mlflow_config": {
+            "enable": true,
+            "log_model_file": true,
+            "use_local_server": true,
+            "local_server_port": 5000,
+            "artifact_path": "model",
+            "regis_model_on_predict": true,
+            "await_registration_for": 10,
+            "whl_local_path": "/dist/customer_analysis-0.0.1.dev0-py3-none-any.whl",
+            "whl_other_path": "/dbfs/FileStore/jars/e62b9c0e_d13c_43d4_8350_2cea9f42614b/customer_analysis-0.0.1.dev0-py3-none-any.whl",
+            "regis_model_descrip": "",
+            "serve_regis_model_on_predict": true,
+            "tags": {}
+        }
+    }
+}
